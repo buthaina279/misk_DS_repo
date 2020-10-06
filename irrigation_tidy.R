@@ -5,7 +5,7 @@
 
 library(tidyverse)
 # Begin with wide "messy" format 
-irrigation <- read_csv("data/irrigation_wide.csv")
+irrigation <- read_csv("irrigation_wide.csv")
 irrigation
 # Examine the data 
 glimpse(irrigation)
@@ -17,9 +17,11 @@ irrigation %>%
   sum()
 # or select("N. America", "S. America")
 irrigation_t
+
 # tidy data
 irrigation_t <- irrigation %>% 
 pivot_longer(-year, names_to = "region")
+
 # sum by year
 irrigation_t %>% 
   group_by(year) %>% 
@@ -52,3 +54,12 @@ irrigation_t %>%
 irrigation_t %>%
   ungroup() %>% 
   slice_min(rate, n = 1)
+
+# Data visualisation 
+irrigation <- read_csv("irrigation_long.csv")
+
+ggplot(irrigation, aes(x= region, y = area)) +
+  geom_point()
+  
+  
+  
