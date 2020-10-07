@@ -3,6 +3,8 @@
 # 01.10.2020
 #  A small case study 
 
+#
+
 library(tidyverse)
 # Begin with wide "messy" format 
 irrigation <- read_csv("irrigation_wide.csv")
