@@ -1,0 +1,80 @@
+---
+title: "Chick Weight Analysis"
+author: "*Buthaina Alshareef*"
+date: "*03-10-2020*"
+output:
+  html_document:
+   toc: true
+   toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(tidyverse)
+library(Hmisc)
+library(agricolae)
+library(DT)
+```
+
+## Descriptive Statistics
+
+
+
+
+
+```{r table1, echo = FALSE, message=FALSE}
+chickTable <- chickwts %>% 
+            group_by(feed) %>%
+             summarise(n = length(feed),
+            Average = mean(weight), 
+            SD = sd(weight))
+datatable(chickTable)
+
+```
+
+## Plots
+
+
+```{r boxplot, echo=FALSE}
+ggplot(chickwts, aes(feed,weight)) +
+  geom_boxplot() +
+  theme_classic()
+  
+
+
+```
+
+
+```{r scatterplot, echo=FALSE}
+ggplot(chickwts, aes(feed,weight)) +
+   geom_jitter(width = 1) +
+  stat_summary(fun.data = mean_sdl, 
+               fun.args = list(mult = 1), col = "red") +
+  theme_classic()
+```
+
+## Inferential Statistics
+The one-way ANOVA summary:
+
+```{r linearModel, echo=FALSE, message=FALSE}
+chickTable_lm <- lm(weight ~ feed, data = chickwts)
+
+chickTable_lm_anv <- anova(chickTable_lm)
+kable(chickTable_lm_anv)
+
+```
+Tukey’s Post-hoc test:
+
+
+```{r table2, echo=FALSE, rows.print=15, cols.print=5}
+chickwts.av <- aov(weight ~ feed, data = chickwts)
+tukeyTest <- TukeyHSD(chickwts.av)
+datatable(tukeyTest$feed, colnames = c("Group Comparison", "Difference in Means", "Upper 95% CI", "Lower 95% Cl", "Adjusted p-value") )
+
+```
+
+
+
+
+
