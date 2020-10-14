@@ -1,0 +1,36 @@
+---
+title: "Hotel booking Analysis"
+author: "Buthaina Alshareef"
+date: "13-10-2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Get familiar with data
+
+
+```{r get familiar with data}
+Hotel_bookings <- read_csv("hotel_bookings.csv")
+
+summary(Hotel_bookings)
+names(Hotel_bookings)
+glimpse(Hotel_bookings)
+typeof(Hotel_bookings)
+str(Hotel_bookings)
+Hotel_bookings_df <- tibble(Hotel_bookings)
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
