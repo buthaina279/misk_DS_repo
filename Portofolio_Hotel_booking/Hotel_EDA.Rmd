@@ -2,16 +2,24 @@
 title: "Hotel booking Analysis"
 author: "Buthaina Alshareef"
 date: "13-10-2020"
-output: html_document
+output:
+  html_document:
+    fig_caption: false
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(scales)
+library(DT)
+#library(Rmisc)
 ```
 
-## Get familiar with data
 
 
 ```{r get familiar with data, echo=FALSE, message=FALSE}
@@ -25,24 +33,70 @@ str(Hotel_bookings)
 class(Hotel_bookings)
 
 ```
-## Descriptive Statistics
+# Descriptive Statistics
 
 ```{r, echo=FALSE, message=FALSE}
-Hotel_bookings2 <- Hotel_bookings %>% 
-  select(hotel, is_canceled) %>% 
-  na.omit()
+#range(Hotel_bookings$adr) (0, 6000)
+#range(Hotel_bookings$stays_in_week_nights)
+HotelTable <- Hotel_bookings %>% 
+            group_by(hotel) %>%
+             summarise(n = length(Hotel_bookings),
+            Average_days = mean(stays_in_week_nights),
+            SD_days = sd(stays_in_week_nights),
+            min_days = min(stays_in_week_nights),
+            max_days = max(stays_in_week_nights),
+            Average_price = mean(adr),
+            SD_price = sd(adr),
+            min_price = min(adr),
+            max_price = max(adr)
+            )
+
+
+
+datatable(HotelTable)
 ```
 
-# Categorical described by Continuous 
+**Days Plot**
 
+```{r ,echo=FALSE, message=FALSE}
+ggplot(Hotel_bookings, aes(x = stays_in_week_nights, color = hotel)) +
+   geom_histogram(bins = 9) +
+  geom_vline(aes(xintercept=mean(stays_in_week_nights)),
+            color="blue", linetype="dashed", size=1) +
+  coord_cartesian(xlim = c(0,50)) +
+  facet_grid(. ~ hotel) +
+  labs(title = "mean & frequency for the days") +
+  theme_classic()+
+ NULL
+```
+
+**Price Plot**
 
 ```{r}
-
+ggplot(Hotel_bookings, aes(x = adr, color = hotel)) +
+   geom_histogram(bins = 9) +
+  geom_vline(aes(xintercept=mean(adr)),
+            color="blue", linetype="dashed", size=1)+
+  #coord_cartesian(xlim = c(0,6000)) +
+  facet_grid(. ~ hotel) +
+  labs(title = "mean & frequency for the price") +
+  theme_classic() +
+ NULL
 ```
 
-Bar chart
+Cont with Cont 
+Adr 
+sty week nights 
+Sample 
+
+## Cat ~ Cat 
+Hotel is binary variable 
+is_canceled is binary variable 
+
+**the total of canceled reservations to not canceled by hotel type (proportion)**
+Bar chart 
 ```{r, echo=FALSE, message=FALSE}
-ggplot(Hotel_bookings2, aes(x = hotel,
+ggplot(Hotel_bookings, aes(x = hotel,
          y = prop.table(stat(count)),
          fill = factor(is_canceled),
        label = percent(prop.table(stat(count))))) +
@@ -58,7 +112,81 @@ ggplot(Hotel_bookings2, aes(x = hotel,
   scale_fill_discrete(name = "Booking Status",
                       breaks = c("0","1"),
                       labels = c("Cancelled", "Not Cancelled")) +
-  theme_classic()
+  theme_classic() +
 NULL
 ```
+**Description:**
+## Two sample t-test
 
+Categorical described by Continuous
+Are the two types of hotel have the same prices? 
+
+```{r}
+ggplot(Hotel_bookings, aes(x = 1, y = adr)) +
+  geom_jitter(width = 0.2) +
+  labs(title = "No information from X at all")
+```
+
+```{r}
+ggplot(Hotel_bookings, aes(x = hotel, y = adr)) +
+  geom_jitter(width = 0.2) +
+  labs(title = "ALL information from X that is available")
+```
+**two sample t.test**
+$\bar{x}_{City Hotel} - \bar{x}_{Resort Hotel}$
+```{r}
+t.test(adr ~ hotel, data = Hotel_bookings, var.equal = TRUE)
+```
+Because the p-value < 2.2e-16, we are going to:
+- Reject the null hypothesis 
+- There is evidence that the hotel type is related to the price 
+- There is an association between price and hotel type
+- We can use the hotel type to predict price!
+
+# 95% CI
+
+```{r, echo=FALSE, message=FALSE}
+# Data
+city_hotel <- Hotel_bookings$stays_in_week_nights[Hotel_bookings$hotel == "City Hotel"]
+resort_hotel <- Hotel_bookings$stays_in_week_nights[Hotel_bookings$hotel == "Resort Hotel"]
+```
+
+
+```{r, echo=FALSE, message=FALSE}
+# city_hotel_CI <- CI(city_hotel, ci = 0.95)
+# resort_hotel_CI <- CI(resort_hotel, ci = 0.95)
+```
+
+# Linear Regression
+**Does the hotel price affect the number of staying days in weekdays?**
+```{r}
+City_price_mean <- mean(Hotel_bookings$adr[Hotel_bookings$hotel == "City Hotel"])
+Hotel_bookings %>% 
+  filter(hotel == "City Hotel") %>% 
+  ggplot(aes(x = 1, y = adr)) +
+  geom_jitter(width = 0.2) +
+  geom_hline(aes(yintercept = City_price_mean, color = "Null model (y-bar)")) +
+  coord_cartesian(xlim = c(0,2)) +
+  labs(title = "No information from X at all")
+```
+
+```{r}
+posn_j <- position_jitter(seed = 136)
+
+Hotel_bookings %>% 
+  filter(hotel == "City Hotel") %>% 
+ggplot(aes(x = stays_in_week_nights, y = adr)) +
+  geom_point(position = posn_j, shape = ".", alpha = 0.25) +
+  # stat_summary(fun.data = mean_sdl, 
+               #fun.args = list(mult = 1), col = "red") +
+  geom_smooth(method = "lm", se = FALSE) +
+  NULL
+```
+- the null hypothesis fail to reject since null hypothesis very close to zero(i.e. the null model) 
+- There is no association between price and the number of stay days 
+
+```{r}
+speed_eye <- lm(adr ~ stays_in_week_nights, data = Hotel_bookings[Hotel_bookings$hotel == "City Hotel",])
+summary(speed_eye)
+```
+Prove it by p-value: < 2.2e-16 
