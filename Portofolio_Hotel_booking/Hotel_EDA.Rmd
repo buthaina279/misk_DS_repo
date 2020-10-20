@@ -8,12 +8,13 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(scales)
 ```
 
 ## Get familiar with data
 
 
-```{r get familiar with data}
+```{r get familiar with data, echo=FALSE, message=FALSE}
 Hotel_bookings <- read_csv("hotel_bookings.csv")
 
 summary(Hotel_bookings)
@@ -21,16 +22,43 @@ names(Hotel_bookings)
 glimpse(Hotel_bookings)
 typeof(Hotel_bookings)
 str(Hotel_bookings)
-Hotel_bookings_df <- tibble(Hotel_bookings)
+class(Hotel_bookings)
+
+```
+## Descriptive Statistics
+
+```{r, echo=FALSE, message=FALSE}
+Hotel_bookings2 <- Hotel_bookings %>% 
+  select(hotel, is_canceled) %>% 
+  na.omit()
+```
+
+# Categorical described by Continuous 
+
+
+```{r}
 
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-
+Bar chart
+```{r, echo=FALSE, message=FALSE}
+ggplot(Hotel_bookings2, aes(x = hotel,
+         y = prop.table(stat(count)),
+         fill = factor(is_canceled),
+       label = percent(prop.table(stat(count))))) +
+  geom_bar( position = "dodge") +
+  geom_text(
+    stat = "count",
+    position = position_dodge(.9),
+    vjust = -0.5,
+    size = 3
+  ) +
+ scale_y_continuous(labels = percent) +
+  labs(x = "Hotel Type", y = "Proportion", title = "Cancelation Status by Hotel Type") +
+  scale_fill_discrete(name = "Booking Status",
+                      breaks = c("0","1"),
+                      labels = c("Cancelled", "Not Cancelled")) +
+  theme_classic()
+NULL
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
