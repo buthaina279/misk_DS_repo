@@ -1,28 +1,155 @@
 ---
-title: "Student_performence"
-output: html_document
+title: "Student_performance"
+author: "*Buthaina Alshareef*"
+date: "*21-10-2020*"
+output:
+  html_document:
+   toc: true
+   toc_float: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(scales)
+library(DT)
+#library(Rmisc)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r get familiar with data, echo=FALSE, message=FALSE}
+student <- read_csv("StudentsPerformance.csv")
 
-```{r cars}
-summary(cars)
+names(student)<-make.names(names(student),unique = TRUE)
+summary(student)
+#names(student)
+# glimpse(student)
+# typeof(student)
+# str(student)
+ #class(student)
+#describe(student)
+
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+# Descriptive Statistics
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r, echo=FALSE, message=FALSE}
+#range(student$reading.score) (0, 6000)
+#range(student$math.score)
+studentTable1 <- student %>% 
+            group_by(gender) %>%
+             summarise(n = nrow(student),
+            Average_math = mean(math.score),
+            SD_math = sd(math.score),
+            min_math = min(math.score),
+            max_math = max(math.score))
+            
+studentTable2 <- student %>% 
+            group_by(gender) %>%
+            summarise(n = nrow(student),
+            Average_reading = mean(reading.score),
+            SD_reading = sd(reading.score),
+            min_reading = min(reading.score),
+            max_reading = max(reading.score))
+
+studentTable3 <- student %>% 
+            group_by(gender) %>%
+            summarise(n = nrow(student),
+            Average_writing = mean(writing.score),
+            SD_writing = sd(writing.score),
+            min_writing = min(writing.score),
+            max_writing = max(writing.score))
+
+                       
+
+datatable(studentTable1)
+datatable(studentTable2)
+datatable(studentTable3)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Math Score
+```{r ,echo=FALSE, message=FALSE}
+ggplot(student, aes(x = math.score, color = gender)) +
+   geom_histogram(bins = 9) +
+  geom_vline(aes(xintercept=mean(math.score)),
+            color="blue", linetype="dashed", size=1) +
+  facet_grid(. ~ gender) +
+  coord_cartesian(xlim = c(0,100)) +
+  labs(title = "mean & frequency for the math score") +
+  theme_classic()+
+ NULL
+
+```
+
+writing Score
+```{r ,echo=FALSE, message=FALSE}
+ggplot(student, aes(x = writing.score, color = gender)) +
+   geom_histogram(bins = 9) +
+  geom_vline(aes(xintercept=mean(writing.score)),
+            color="blue", linetype="dashed", size=1) +
+  facet_grid(. ~ gender) +
+  coord_cartesian(xlim = c(0,100)) +
+  labs(title = "mean & frequency for the writing score") +
+  theme_classic()+
+ NULL
+
+```
+
+Writing Score
+```{r ,echo=FALSE, message=FALSE}
+ggplot(student, aes(x = writing.score, color = gender)) +
+   geom_histogram(bins = 9) +
+  geom_vline(aes(xintercept=mean(writing.score)),
+            color="blue", linetype="dashed", size=1) +
+  facet_grid(. ~ gender) +
+  coord_cartesian(xlim = c(0,100)) +
+  labs(title = "mean & frequency for the writing score") +
+  theme_classic()+
+ NULL
+
+```
+
+# Infrential Statistics 
+
+
+```{r,echo=FALSE, message=FALSE}
+ math_50 <-  sum(student$math.score > 50)
+n = nrow(student)
+math_50_prob <- (math_50/n)*100
+```
+The probability for the students to get more than 50 in math is `r math_50_prob`%
+
+```{r,echo=FALSE, message=FALSE}
+ writing_50 <-  sum(student$writing.score > 50)
+n = nrow(student)
+writing_50_prob <- (writing_50/n)*100
+```
+The probability for the students to get more than 50 in writing is `r writing_50_prob`%
+
+```{r,echo=FALSE, message=FALSE}
+ reading_50 <-  sum(student$reading.score > 50)
+n = nrow(student)
+reading_50_prob <- (reading_50/n)*100
+```
+The probability for the students to get more than 50 in reading is `r reading_50_prob`%
+
+# Two sample t-test
+
+```{r}
+ggplot(student, aes(x = 1, y = math.score)) +
+  geom_jitter(width = 0.2) +
+  labs(title = "No information from X at all")
+```
+
+```{r}
+ggplot(student, aes(x = gender, y = math.score, color = gender)) +
+  geom_jitter(width = 0.2) +
+  labs(title = "ALL information from X that is available")
+```
+$\bar{x}_{female} - \bar{x}_{male}$
+```{r}
+t.test(math.score ~ gender, data = student)
+```
