@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(scales)
 library(DT)
+library(ggpubr)
+library(knitr)
 #library(Rmisc)
 ```
 
@@ -22,7 +24,8 @@ library(DT)
 student <- read_csv("StudentsPerformance.csv")
 
 names(student)<-make.names(names(student),unique = TRUE)
-summary(student)
+posn_j <- position_jitter(seed = 136)
+#summary(student)
 #names(student)
 # glimpse(student)
 # typeof(student)
@@ -34,6 +37,7 @@ summary(student)
 
 
 # Descriptive Statistics
+
 
 ```{r, echo=FALSE, message=FALSE}
 #range(student$reading.score) (0, 6000)
@@ -64,57 +68,153 @@ studentTable3 <- student %>%
 
                        
 
-datatable(studentTable1)
-datatable(studentTable2)
-datatable(studentTable3)
+
+
+
+```
+
+### Math Score
+```{r , echo=FALSE, message=FALSE}
+kable(studentTable1)
 ```
 
 
-Math Score
+### Reading Score
+```{r , echo=FALSE, message=FALSE}
+kable(studentTable2)
+```
+
+
+### Writing Score
+```{r , echo=FALSE, message=FALSE}
+kable(studentTable3)
+```
+
+##
+#### Normal Distribution
+
 ```{r ,echo=FALSE, message=FALSE}
-ggplot(student, aes(x = math.score, color = gender)) +
-   geom_histogram(bins = 9) +
-  geom_vline(aes(xintercept=mean(math.score)),
-            color="blue", linetype="dashed", size=1) +
-  facet_grid(. ~ gender) +
+ggplot(student, aes(x = math.score)) +
+  geom_histogram(aes(y=..density..), alpha=0.5, 
+                position="identity", color = "#3182bd", fill = "#deebf7") +
+  geom_density(alpha=0.2, fill = "#FF6666", color = "#3182bd") +
+  geom_vline(aes(xintercept= mean(math.score)), linetype="dashed", size=1, color = "#de2d26") +
+  #facet_grid(. ~ gender) +
   coord_cartesian(xlim = c(0,100)) +
-  labs(title = "mean & frequency for the math score") +
+  labs(title = "Population distribution for the math score", x = "math score",y = "Frequency") +
+  # scale_color_brewer("Iris Species", palette = "Dark2") +
   theme_classic()+
  NULL
 
 ```
 
-writing Score
+### Sample means for Math Score
+```{r,echo=FALSE, message=FALSE}
+n <- 3
+r <- 30000
+# Take r samples, each having n observations:
+math_sample_means <- rep(n, r) %>% 
+  map_dbl( ~  mean(sample(student$math.score, size = ., replace = TRUE)) )
+# plot them:
+h <- hist(math_sample_means, breaks = 100, col = "#9ecae1", xlab = " math score" , main = "Central Limit theorem")
+xfit <- seq(min(math_sample_means), max(math_sample_means), length = 40) 
+yfit <- dnorm(xfit, mean = mean(math_sample_means), sd = sd(math_sample_means)) 
+yfit <- yfit * diff(h$mids[1:2]) * length(math_sample_means) 
+
+lines(xfit, yfit, col = "#de2d26", lwd = 2)
+```
+
+
 ```{r ,echo=FALSE, message=FALSE}
-ggplot(student, aes(x = writing.score, color = gender)) +
-   geom_histogram(bins = 9) +
-  geom_vline(aes(xintercept=mean(writing.score)),
-            color="blue", linetype="dashed", size=1) +
-  facet_grid(. ~ gender) +
+ggplot(student, aes(x = reading.score)) +
+   geom_histogram(aes(y=..density..), alpha=0.5, 
+                position="identity", color = "#3182bd", fill = "#deebf7") +
+  geom_density(alpha=0.2, fill = "#FF6666", color = "#3182bd") +
+  geom_vline(aes(xintercept=mean(reading.score)),
+             linetype="dashed", size=1, color = "#de2d26") +
+  #facet_grid(. ~ gender) +
   coord_cartesian(xlim = c(0,100)) +
-  labs(title = "mean & frequency for the writing score") +
+  labs(title = "Population distribution for the reading score", x = "reading score", y = "Frequency") +
   theme_classic()+
  NULL
 
 ```
 
-Writing Score
+### Sample means for Reading Score
+```{r,echo=FALSE, message=FALSE}
+n <- 3
+r <- 30000
+# Take r samples, each having n observations:
+reading_sample_means <- rep(n, r) %>% 
+  map_dbl( ~  mean(sample(student$reading.score, size = ., replace = TRUE)) )
+# plot them:
+h <- hist(reading_sample_means, breaks = 100, col = "#9ecae1", xlab = "reading score" , main = "Central Limit theorem")
+xfit <- seq(min(reading_sample_means), max(reading_sample_means), length = 40) 
+yfit <- dnorm(xfit, mean = mean(reading_sample_means), sd = sd(reading_sample_means)) 
+yfit <- yfit * diff(h$mids[1:2]) * length(reading_sample_means) 
+
+lines(xfit, yfit, col = "#de2d26", lwd = 2)
+```
+
+
 ```{r ,echo=FALSE, message=FALSE}
-ggplot(student, aes(x = writing.score, color = gender)) +
-   geom_histogram(bins = 9) +
-  geom_vline(aes(xintercept=mean(writing.score)),
-            color="blue", linetype="dashed", size=1) +
-  facet_grid(. ~ gender) +
+ggplot(student, aes(x = writing.score)) +
+   geom_histogram(aes(y=..density..), alpha=0.5, 
+                position="identity", color = "#3182bd", fill = "#deebf7") +
+  geom_density(alpha=0.2, fill = "#FF6666", color = "#3182bd") +
+  geom_vline(aes(xintercept=mean(writing.score))
+            , linetype="dashed", size=1, color = "#de2d26") +
+  #facet_grid(. ~ gender) +
   coord_cartesian(xlim = c(0,100)) +
-  labs(title = "mean & frequency for the writing score") +
+  labs(title = "Population distribution for the writing score", x = "writing score",y = "Frequency") +
   theme_classic()+
  NULL
 
 ```
 
-# Infrential Statistics 
+### Sample means for Writing Score
+```{r,echo=FALSE, message=FALSE}
+n <- 3
+r <- 30000
+# Take r samples, each having n observations:
+writing_sample_means <- rep(n, r) %>% 
+  map_dbl( ~  mean(sample(student$writing.score, size = ., replace = TRUE)) )
+# plot them:
+h <- hist(writing_sample_means, breaks = 100, col = "#9ecae1", xlab = "writing score" , main = "Central Limit theorem")
+xfit <- seq(min(writing_sample_means), max(writing_sample_means), length = 40) 
+yfit <- dnorm(xfit, mean = mean(writing_sample_means), sd = sd(writing_sample_means)) 
+yfit <- yfit * diff(h$mids[1:2]) * length(writing_sample_means) 
+
+lines(xfit, yfit, col = "#de2d26", lwd = 2)
+```
+
+- The data is normally distributed in math, reading, and writing score in both population and sample means 
+-  the sample mean $\bar{x}$ is an unbiased estimator for the underlying population mean $\mu$
+- the sample means $\bar{x}$ are centered on the population mean  $\mu$
 
 
+
+# 95% CI
+
+Math score
+```{r,echo=FALSE, message=FALSE}
+math_mu <- mean(student$math.score)
+t.test(student$math.score, mu = math_mu, paired = FALSE )
+```
+There is a 95% chance that interval [65.14806, 67.02994] _covers_ the true population parameter $\mu$ (66.089).
+
+```{r,echo=FALSE, message=FALSE}
+reading_mu <- mean(student$reading.score)
+t.test(student$reading.score, mu = reading_mu, paired = FALSE )
+```
+
+```{r,echo=FALSE, message=FALSE}
+writing_mu <- mean(student$writing.score)
+t.test(student$writing.score, mu = writing_mu, paired = FALSE )
+```
+
+
+# Probability 
 ```{r,echo=FALSE, message=FALSE}
  math_50 <-  sum(student$math.score > 50)
 n = nrow(student)
@@ -136,20 +236,116 @@ reading_50_prob <- (reading_50/n)*100
 ```
 The probability for the students to get more than 50 in reading is `r reading_50_prob`%
 
+
+
+
+
 # Two sample t-test
 
-```{r}
+Is there a relationship between gender and scores in each subject?
+```{r,echo=FALSE, message=FALSE}
 ggplot(student, aes(x = 1, y = math.score)) +
-  geom_jitter(width = 0.2) +
-  labs(title = "No information from X at all")
+  geom_point(position = posn_j, shape = 16, color = "#3182bd") +
+  labs(title = "No information from X at all", y = "math score") +
+  theme_classic() +
+  NULL
 ```
 
-```{r}
+```{r,echo=FALSE, message=FALSE}
 ggplot(student, aes(x = gender, y = math.score, color = gender)) +
-  geom_jitter(width = 0.2) +
-  labs(title = "ALL information from X that is available")
+  geom_point(position = posn_j, shape = 16) +
+  scale_color_manual(values=c("#fa9fb5", "#3182bd")) +
+  stat_summary(fun.data = mean_sdl, 
+               fun.args = list(mult = 1), col = "#de2d26") +
+  labs(title = "ALL information from X that is available", y = "math score") +
+  NULL
 ```
 $\bar{x}_{female} - \bar{x}_{male}$
-```{r}
+```{r,echo=FALSE, message=FALSE}
 t.test(math.score ~ gender, data = student)
+
 ```
+
+Here the p-value =  8.421e-08 which means: 
+
+- Reject the null hypothesis 
+- There is evidence that the gender is related to the scores in math 
+- We can use the gender to predict scores in math!
+
+```{r,echo=FALSE, message=FALSE}
+#t.test(math.score ~ gender, data = student, alternative = "less")
+#Test the normality
+# with(student, shapiro.test(math.score[gender == "male"]))
+```
+
+```{r,echo=FALSE, message=FALSE}
+# with(student, shapiro.test(math.score[gender == "female"]))
+```
+
+# Linear regression 
+
+Is there a relationship between math score and scores in each subject?
+
+```{r,echo=FALSE, message=FALSE}
+ggplot(student, aes(x = math.score, y = reading.score)) +
+  geom_point(shape = 16, position = posn_j, color = "#3182bd" ) +
+  geom_smooth(method = "lm", se = FALSE, color = "#de2d26" ) +
+  labs(x = "math score", y = "reading score") +
+  theme_classic() +
+  NULL
+```
+
+t-test
+```{r,echo=FALSE, message=FALSE}
+math_reading <- lm(reading.score ~ math.score, data = student)
+summary(math_reading)
+```
+
+Reject the null hypothesis 
+
+```{r,echo=FALSE, message=FALSE}
+ggplot(student, aes(x = math.score, y = writing.score)) +
+  geom_point(shape = 16, position = posn_j, color = "#3182bd") +
+  geom_smooth(method = "lm", se = FALSE, color = "#de2d26") +
+  labs(x = "math score", y = "writing score") +
+  theme_classic() +
+  NULL
+```
+
+t-test
+
+```{r,echo=FALSE, message=FALSE}
+math_writing <- lm(writing.score ~ math.score, data = student)
+summary(math_writing)
+```
+Reject the null hypothesis 
+
+# One-way ANOVA
+
+Visualizing the relashionship between each group of education 
+```{r,echo=FALSE, message=FALSE}
+
+#unique(student$parental.level.of.education)
+ggline(student, x = "parental.level.of.education", y = "math.score", 
+       add = c("mean_se", "jitter"), 
+       order = c("high school", "some high school", "some college", "bachelor's degree", "master's degree", "associate's degree"),
+       ylab = "math score", 
+       xlab = "education", 
+       point.color = "#de2d26", 
+       title = "Parental level of education",
+       color = "#3182bd"
+        )
+```
+
+
+```{r,echo=FALSE, message=FALSE}
+res.aov <- aov(math.score ~ parental.level.of.education, data = student)
+summary(res.aov)
+```
+the low p-value indicates that the parental level of education means are different 
+```{r,echo=FALSE, message=FALSE}
+tukeyTest <- TukeyHSD(res.aov)
+
+datatable(tukeyTest$parental.level.of.education, colnames = c("Group Comparison", "Difference in Means", "Upper 95% CI", "Lower 95% Cl", "Adjusted p-value"))
+```
+
