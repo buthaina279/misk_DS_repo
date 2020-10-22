@@ -10,27 +10,29 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 library(tidyverse)
 library(scales)
 library(DT)
 library(ggpubr)
 library(knitr)
-#library(Rmisc)
+
 ```
 
 
 
 ```{r get familiar with data, echo=FALSE, message=FALSE}
-student <- read_csv("StudentsPerformance.csv")
+# https://www.kaggle.com/spscientist/students-performance-in-exams
+student <- read.csv("StudentsPerformance.csv")
 
-names(student)<-make.names(names(student),unique = TRUE)
+# names(student) <- make.names(names(student), unique = TRUE)
 posn_j <- position_jitter(seed = 136)
 #summary(student)
 names(student)
 # glimpse(student)
 # typeof(student)
 # str(student)
- #class(student)
+#class(student)
 #describe(student)
 
 ```
@@ -43,73 +45,106 @@ names(student)
 #range(student$reading.score) (0, 6000)
 #range(student$math.score)
 studentTable1 <- student %>% 
-            group_by(gender) %>%
-             summarise(n = nrow(student),
+  group_by(gender) %>%
+  summarise(n = n(),
             Average_math = mean(math.score),
             SD_math = sd(math.score),
             min_math = min(math.score),
             max_math = max(math.score))
-            
+
 studentTable2 <- student %>% 
-            group_by(gender) %>%
-            summarise(n = nrow(student),
+  group_by(gender) %>%
+  summarise(n = nrow(student),
             Average_reading = mean(reading.score),
             SD_reading = sd(reading.score),
             min_reading = min(reading.score),
             max_reading = max(reading.score))
 
 studentTable3 <- student %>% 
-            group_by(gender) %>%
-            summarise(n = nrow(student),
+  group_by(gender) %>%
+  summarise(n = nrow(student),
             Average_writing = mean(writing.score),
             SD_writing = sd(writing.score),
             min_writing = min(writing.score),
             max_writing = max(writing.score))
 
-                       
 
 
-
+student_gender_summary <- student %>% 
+  mutate(ID = 1:nrow(student)) %>% 
+  pivot_longer(ends_with("score"), names_to = "test", values_to = "score") %>% 
+  mutate(test = str_remove(test, ".score")) %>% 
+  group_by(gender, test) %>%
+  summarise(n = n(),
+            Average = mean(score),
+            SD = sd(score),
+            min = min(score),
+            max = max(score))
 
 ```
 
-### Math Score
+### Summary of scores by gender
+
 ```{r , echo=FALSE, message=FALSE}
-kable(studentTable1)
+kable(student_gender_summary)
+```
+
+```{r}
+ggplot(student_gender_summary, aes(test, Average, ymin = Average - SD, ymax = Average + SD, color = gender)) +
+  geom_pointrange(position = position_dodge(0.3))
 ```
 
 
-### Reading Score
-```{r , echo=FALSE, message=FALSE}
-kable(studentTable2)
-```
-
-
-### Writing Score
-```{r , echo=FALSE, message=FALSE}
-kable(studentTable3)
-```
 
 ## Inferential statistics
 
 #### Normal Distribution
 
+```{r}
+ggplot(student, aes(x = math.score, fill = gender, color = gender)) +
+  geom_density(alpha = 0.2) +
+  geom_vline(aes(xintercept = Average, color = gender), data = student_gender_summary[student_gender_summary$test == "math",] ,
+             linetype = "dashed", size = 1) +
+  coord_cartesian(xlim = c(0,100))
+```
+
+# how to get all three score distributions together
+
+```{r}
+student %>% 
+  mutate(ID = 1:nrow(student)) %>% 
+  pivot_longer(ends_with("score"), names_to = "test", values_to = "score") %>% 
+  mutate(test = str_remove(test, ".score")) %>% 
+  select(gender, test, score) %>% 
+  ggplot(aes(x = score, fill = gender, color = gender)) +
+  geom_density(alpha = 0.2) +
+  geom_vline(aes(xintercept = Average, color = gender), 
+             data = student_gender_summary,
+             linetype = "dashed", size = 1) +
+  facet_grid(test ~ .) +
+  coord_cartesian(xlim = c(0,100))
+```
+
+
+
+
 ```{r ,echo=FALSE, message=FALSE}
 ggplot(student, aes(x = math.score)) +
-  geom_histogram(aes(y=..density..), alpha=0.5, 
-                position="identity", color = "#3182bd", fill = "#deebf7") +
+  geom_histogram(aes(y=..density..),
+                 fill = "#deebf7") +
   geom_density(alpha=0.2, fill = "#FF6666", color = "#3182bd") +
-  geom_vline(aes(xintercept= mean(math.score)), linetype="dashed", size=1, color = "#de2d26") +
-  #facet_grid(. ~ gender) +
+  geom_vline(aes(xintercept = mean(math.score)), linetype = "dashed", size = 1, color = "#de2d26") +
+  facet_grid(. ~ gender) +
   coord_cartesian(xlim = c(0,100)) +
   labs(title = "Population distribution for the math score", x = "math score",y = "Frequency") +
   # scale_color_brewer("Iris Species", palette = "Dark2") +
   theme_classic()+
- NULL
+  NULL
 
 ```
 
 ### Sample means for Math Score
+
 ```{r,echo=FALSE, message=FALSE}
 n <- 3
 r <- 30000
@@ -128,8 +163,8 @@ lines(xfit, yfit, col = "#de2d26", lwd = 2)
 
 ```{r ,echo=FALSE, message=FALSE}
 ggplot(student, aes(x = reading.score)) +
-   geom_histogram(aes(y=..density..), alpha=0.5, 
-                position="identity", color = "#3182bd", fill = "#deebf7") +
+  geom_histogram(aes(y=..density..), alpha=0.5, 
+                 position="identity", color = "#3182bd", fill = "#deebf7") +
   geom_density(alpha=0.2, fill = "#FF6666", color = "#3182bd") +
   geom_vline(aes(xintercept=mean(reading.score)),
              linetype="dashed", size=1, color = "#de2d26") +
@@ -137,7 +172,7 @@ ggplot(student, aes(x = reading.score)) +
   coord_cartesian(xlim = c(0,100)) +
   labs(title = "Population distribution for the reading score", x = "reading score", y = "Frequency") +
   theme_classic()+
- NULL
+  NULL
 
 ```
 
@@ -160,16 +195,16 @@ lines(xfit, yfit, col = "#de2d26", lwd = 2)
 
 ```{r ,echo=FALSE, message=FALSE}
 ggplot(student, aes(x = writing.score)) +
-   geom_histogram(aes(y=..density..), alpha=0.5, 
-                position="identity", color = "#3182bd", fill = "#deebf7") +
+  geom_histogram(aes(y=..density..), alpha=0.5, 
+                 position="identity", color = "#3182bd", fill = "#deebf7") +
   geom_density(alpha=0.2, fill = "#FF6666", color = "#3182bd") +
   geom_vline(aes(xintercept=mean(writing.score))
-            , linetype="dashed", size=1, color = "#de2d26") +
+             , linetype="dashed", size=1, color = "#de2d26") +
   #facet_grid(. ~ gender) +
   coord_cartesian(xlim = c(0,100)) +
   labs(title = "Population distribution for the writing score", x = "writing score",y = "Frequency") +
   theme_classic()+
- NULL
+  NULL
 
 ```
 
@@ -217,21 +252,21 @@ There is a 95% chance that interval [67.11104, 68.99696] _covers_ the true popul
 
 # Probability 
 ```{r,echo=FALSE, message=FALSE}
- math_50 <-  sum(student$math.score > 50)
+math_50 <-  sum(student$math.score > 50)
 n = nrow(student)
 math_50_prob <- (math_50/n)*100
 ```
 The probability for the students to get more than 50 in math is `r math_50_prob`%
 
 ```{r,echo=FALSE, message=FALSE}
- writing_50 <-  sum(student$writing.score > 50)
+writing_50 <-  sum(student$writing.score > 50)
 n = nrow(student)
 writing_50_prob <- (writing_50/n)*100
 ```
 The probability for the students to get more than 50 in writing is `r writing_50_prob`%
 
 ```{r,echo=FALSE, message=FALSE}
- reading_50 <-  sum(student$reading.score > 50)
+reading_50 <-  sum(student$reading.score > 50)
 n = nrow(student)
 reading_50_prob <- (reading_50/n)*100
 ```
@@ -332,7 +367,7 @@ ggline(student, x = "parental.level.of.education", y = "math.score",
        point.color = "#de2d26", 
        title = "Parental level of education",
        color = "#3182bd"
-        )
+)
 ```
 
 The lowest scores illustrates that the students whose parent have high school education 
