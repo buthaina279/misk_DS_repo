@@ -26,7 +26,7 @@ student <- read_csv("StudentsPerformance.csv")
 names(student)<-make.names(names(student),unique = TRUE)
 posn_j <- position_jitter(seed = 136)
 #summary(student)
-#names(student)
+names(student)
 # glimpse(student)
 # typeof(student)
 # str(student)
@@ -90,7 +90,8 @@ kable(studentTable2)
 kable(studentTable3)
 ```
 
-##
+## Inferential statistics
+
 #### Normal Distribution
 
 ```{r ,echo=FALSE, message=FALSE}
@@ -207,12 +208,12 @@ There is a 95% chance that interval [65.14806, 67.02994] _covers_ the true popul
 reading_mu <- mean(student$reading.score)
 t.test(student$reading.score, mu = reading_mu, paired = FALSE )
 ```
-
+There is a 95% chance that interval [68.26299, 70.07501] _covers_ the true population parameter $\mu$ (69.169).
 ```{r,echo=FALSE, message=FALSE}
 writing_mu <- mean(student$writing.score)
 t.test(student$writing.score, mu = writing_mu, paired = FALSE )
 ```
-
+There is a 95% chance that interval [67.11104, 68.99696] _covers_ the true population parameter $\mu$ (68.054).
 
 # Probability 
 ```{r,echo=FALSE, message=FALSE}
@@ -235,10 +236,6 @@ n = nrow(student)
 reading_50_prob <- (reading_50/n)*100
 ```
 The probability for the students to get more than 50 in reading is `r reading_50_prob`%
-
-
-
-
 
 # Two sample t-test
 
@@ -302,6 +299,7 @@ summary(math_reading)
 ```
 
 Reject the null hypothesis 
+There is a relashion between math score and reading score 
 
 ```{r,echo=FALSE, message=FALSE}
 ggplot(student, aes(x = math.score, y = writing.score)) +
@@ -337,12 +335,13 @@ ggline(student, x = "parental.level.of.education", y = "math.score",
         )
 ```
 
-
+The lowest scores illustrates that the students whose parent have high school education 
 ```{r,echo=FALSE, message=FALSE}
 res.aov <- aov(math.score ~ parental.level.of.education, data = student)
 summary(res.aov)
 ```
-the low p-value indicates that the parental level of education means are different 
+the low p-value indicates that the parental level of education means are different, thus the null hypothesis would be rejected.
+
 ```{r,echo=FALSE, message=FALSE}
 tukeyTest <- TukeyHSD(res.aov)
 
