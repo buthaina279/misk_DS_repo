@@ -1,0 +1,139 @@
+---
+title: "ex5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Helper packages
+library(dplyr)     # for data wrangling
+library(ggplot2)   # for awesome plotting
+library(rsample)   # for data splitting
+library(tidyverse)
+#data set
+library(kernlab)
+# Modeling packages
+library(caret)     # for logistic regression modeling
+
+# Model interpretability packages
+library(vip)       # variable importance
+library(ROCR)      # ROC curve
+```
+
+Using the spam data set from the kernlab package:
+
+```{r}
+data(spam)
+
+
+# initial dimension
+dim(spam)
+
+# response variable
+head(spam)
+```
+
+```{r}
+set.seed(123)
+spam_split <- initial_split(spam, prop = 0.7, strata = "type")
+spam_train <- training(spam_split)
+spam_test  <- testing(spam_split)
+```
+
+##1
+Pick a single feature 
+
+apply simple logistic regression model.
+Interpret the feature’s coefficient
+What is the model’s performance?
+```{r}
+set.seed(123)
+cv_model_glm1 <- train(
+  type ~ pm, 
+  data = spam_train, 
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+)
+```
+
+##2
+Pick another feature to add to the model.
+
+Before applying the module why do you think this feature will help?
+
+Apply a logistic regression model with the two features and compare to the simple linear model.
+Interpret the coefficients.
+
+```{r}
+set.seed(123)
+cv_model2 <- train(
+  Attrition ~ MonthlyIncome + OverTime, 
+  data = churn_train, 
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+)
+```
+
+##3
+Now apply a model that includes all the predictors.
+How does this model compare to the previous two?
+```{r}
+set.seed(123)
+cv_model3 <- train(
+  Attrition ~ ., 
+  data = churn_train, 
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+)
+```
+
+
+```{r}
+summary(
+  resamples(
+    list(
+      model1 = cv_model1, 
+      model2 = cv_model2, 
+      model3 = cv_model3
+    )
+  )
+)$statistics$Accuracy
+```
+
+##4
+Plot an ROC curve comparing the performance of all three models
+
+```{r}
+# Compute predicted probabilities
+# 
+m1_prob <- predict(cv_model1, churn_train, type = "prob")$Yes
+m3_prob <- predict(cv_model3, churn_train, type = "prob")$Yes
+
+# Compute AUC metrics for cv_model1 and cv_model3
+perf1 <- prediction(m1_prob, churn_train$Attrition) %>%
+  performance(measure = "tpr", x.measure = "fpr")
+perf2 <- prediction(m3_prob, churn_train$Attrition) %>%
+  performance(measure = "tpr", x.measure = "fpr")
+
+# Plot ROC curves for cv_model1 and cv_model3
+plot(perf1, col = "black", lty = 2)
+plot(perf2, add = TRUE, col = "blue")
+legend(0.8, 0.2, legend = c("cv_model1", "cv_model3"),
+       col = c("black", "blue"), lty = 2:1, cex = 0.6)
+```
+
+##5
+
+Compute and interpret the following performance metrics:
+No information rate
+accuracy rate
+sensitivity
+specificity
+
+```{r}
+
+```
+

@@ -49,12 +49,13 @@ def group_mean_std_median(data, g1, g2, col):
 # Descriptive statistics 
 students_t.groupby(['gender','sbj_name'])['scores'].describe()
 
-
+#%%
 
 """ 
 df['maths_pass']=np.where(df['math score']<40,'Fail','Pass')
 df['reading_pass']=np.where(df['reading score']<40,'Fail','Pass')
 df['writing_pass']=np.where(df['writing score']<40,'Fail','Pass') """
+
 
 # %%
 # Normal distribution
@@ -64,9 +65,10 @@ col = "sbj_name",
 kind = "hist")
 
 #%%
-avg, stdv = group_mean_std(students_t, "gender", "sbj_name","scores" )
+avg, stdv, med = group_mean_std_median(students_t, "gender", "sbj_name","scores" )
 avg
 stdv
+med
 #%%
 ymin, ymax = group_range_mean(students_t, "gender", "sbj_name","scores" )
 ymin

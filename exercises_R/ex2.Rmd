@@ -1,0 +1,244 @@
+---
+title: "ex_1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(pdp)
+library(kernlab)
+library(rsample)
+library(caret)
+library(tidyverse)
+```
+
+
+
+```{r cars}
+# access data
+housing <- pdp::boston
+
+# initial dimension
+dim(housing)
+
+# response variable
+head(housing)
+```
+
+Split the Boston housing data into a training set and test set using a 70-30% split.
+
+```{r pressure, echo=FALSE}
+# splitting the data set
+set.seed(123)
+housing_split <- initial_split(housing, prop = 0.7, strata = "cmedv")
+housing_train <- training(housing_split)
+housing_test  <- testing(housing_split)
+```
+How many observations are in the training set and test set?
+
+```{r}
+dim(housing_train)
+dim(housing_test)
+```
+Compare the distribution of cmedv between the training set and test set.
+
+```{r}
+ggplot(housing_train, aes(x = cmedv)) + 
+  geom_line(stat = "density", 
+            trim = TRUE) + 
+  geom_line(data = housing_test, 
+            stat = "density", 
+            trim = TRUE, col = "red")
+```
+According to the plot, it can be clearly seen that both of them have similar distribution
+
+
+Load the spam data set
+```{r}
+data(spam)
+```
+
+******What is the distribution of the target variable (type) across the entire data set?
+
+```{r}
+ggplot(spam, aes(x = type)) + 
+  geom_line(stat = "density", 
+            trim = TRUE)
+```
+the plot does not show the distribution because the target is categorical 
+
+
+Create a 70/30 training/test split stratified by the target variable.
+
+```{r}
+set.seed(123)
+spam_split <- initial_split(spam, prop = 0.7, strata = "type")
+spam_train <- training(spam_split)
+spam_test  <- testing(spam_split)
+```
+
+*****Compare the distribution of the target variable between the training set and test set.
+
+```{r}
+ggplot(spam_train, aes(x = type)) + 
+  geom_line(stat = "density", 
+            trim = TRUE) + 
+  geom_line(data = spam_test, 
+            stat = "density", 
+            trim = TRUE, col = "red")
+```
+
+the plot does not show the distribution because the target is categorical 
+
+
+
+#4
+
+Using the Boston housing training data created in 2), fit a linear regression model that use all available features to predict cmedv.
+
+Create a model with lm(), glm(), and caret::train()
+
+1- lm()
+```{r}
+lm_lm <- lm(cmedv ~ ., 
+            data = housing_train)
+```
+2- glm()
+```{r}
+lm_glm <- glm(cmedv ~ ., 
+              data = housing_train, 
+              family = gaussian)
+```
+3- caret::train() 
+```{r}
+lm_caret <- train(cmedv ~ ., 
+                  data = housing_train, 
+                  method = "lm")
+```
+How do the coefficients compare across these models?
+
+1- lm coefficient
+```{r}
+coef(lm_lm)
+```
+
+2- glm coefficient
+
+```{r}
+coef(lm_glm)
+```
+3- caret::train() coefficient ???**********
+
+```{r}
+coef(lm_caret)
+```
+
+the coefficients in lm() and glm() are identical but in train method the coefficients is NULL!!
+
+How does the MSE/RMSE compare across these models?********
+
+```{r}
+
+```
+
+Which method is caret::train() using to fit a linear regression model?
+
+the linear model lm()
+
+
+
+##5 
+
+Using the Boston housing training data created in exercise 2), perform a 10-fold cross-validated linear regression model, repeated 5 times, that uses all available features to predict cmedv.
+
+
+
+```{r}
+cv <- trainControl(
+  method = "repeatedcv", 
+  number = 10, 
+  repeats = 5
+  )
+```
+
+```{r}
+
+  lm_fit <- train(cmedv ~ ., 
+     data = housing_train, 
+     method = "lm", 
+     trControl = cv,
+      metric = "RMSE")
+```
+
+```{r}
+lm_fit
+```
+
+What is the average RMSE across all 50 model iterations?
+4.839813
+
+Plot the distribution of the RMSE across all 50 model iterations.**********
+```{r}
+ggplot(lm_fit)
+```
+
+Describe the results.
+
+
+*********Repeat this exercise for the spam data from exercise 3); since the target (type) is binary, be sure to use a more appropriate metric (e.g., AUC or misclassification error).
+
+```{r}
+lm_fit_cat <- train(type ~ ., 
+     data = spam_train, 
+     method = "lm", 
+     trControl = cv,
+      metric = "Accuracy")
+```
+What is the average RMSE across all 50 model iterations?
+
+```{r}
+
+```
+
+Plot the distribution of the RMSE across all 50 model iterations.
+
+```{r}
+
+```
+Describe the results.
+
+
+##6
+Repeat exercise 5) on the Boston housing data; however, instead of a linear regression model, use a k-nearest neighbor model that executes a hyperparameter grid search where k ranges from 2–20. How does this model’s results compare to the linear regression results?
+
+```{r}
+hyper_grid <- expand.grid(k = seq(2, 20, by = 2))
+
+# 4. execute grid search with knn model
+#    use RMSE as preferred metric
+knn_fit <- train(
+  cmedv ~ ., 
+  data = housing_train, 
+  method = "knn", 
+  trControl = cv, 
+  tuneGrid = hyper_grid,
+  metric = "RMSE"
+  )
+
+```
+
+What is the average RMSE across all 50 model iterations?
+
+```{r}
+knn_fit
+```
+Plot the distribution of the RMSE across all 50 model iterations.
+
+```{r}
+ggplot(knn_fit)
+```
+
+
+Describe the results.
+
+

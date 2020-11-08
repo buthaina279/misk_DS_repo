@@ -70,6 +70,12 @@ studentTable3 <- student %>%
 
 
 
+
+
+```
+
+
+```{r}
 student_gender_summary <- student %>% 
   mutate(ID = 1:nrow(student)) %>% 
   pivot_longer(ends_with("score"), names_to = "test", values_to = "score") %>% 
@@ -80,7 +86,6 @@ student_gender_summary <- student %>%
             SD = sd(score),
             min = min(score),
             max = max(score))
-
 ```
 
 ### Summary of scores by gender
