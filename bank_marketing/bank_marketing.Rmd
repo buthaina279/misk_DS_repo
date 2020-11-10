@@ -1,0 +1,358 @@
+---
+title: "bank"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#goal
+The classification goal is to predict if the client will subscribe a term deposit
+
+#Attribute Information:
+
+Input variables:
+bank client data:
+1 - age (numeric)
+2 - job : type of job (categorical: 'admin.','blue-collar','entrepreneur','housemaid','management','retired','self-employed','services','student','technician','unemployed','unknown')
+3 - marital : marital status (categorical: 'divorced','married','single','unknown'; note: 'divorced' means divorced or widowed)
+4 - education (categorical: 'basic.4y','basic.6y','basic.9y','high.school','illiterate','professional.course','university.degree','unknown')
+5 - default: has credit in default? (categorical: 'no','yes','unknown')
+6 - housing: has housing loan? (categorical: 'no','yes','unknown')
+7 - loan: has personal loan? (categorical: 'no','yes','unknown')
+# related with the last contact of the current campaign:
+8 - contact: contact communication type (categorical: 'cellular','telephone') 
+9 - month: last contact month of year (categorical: 'jan', 'feb', 'mar', ..., 'nov', 'dec')
+10 - day_of_week: last contact day of the week (categorical: 'mon','tue','wed','thu','fri')
+11 - duration: last contact duration, in seconds (numeric). Important note: this attribute highly affects the output target (e.g., if duration=0 then y='no'). Yet, the duration is not known before a call is performed. Also, after the end of the call y is obviously known. Thus, this input should only be included for benchmark purposes and should be discarded if the intention is to have a realistic predictive model.
+# other attributes:
+12 - campaign: number of contacts performed during this campaign and for this client (numeric, includes last contact)
+13 - pdays: number of days that passed by after the client was last contacted from a previous campaign (numeric; 999 means client was not previously contacted)
+14 - previous: number of contacts performed before this campaign and for this client (numeric)
+15 - poutcome: outcome of the previous marketing campaign (categorical: 'failure','nonexistent','success')
+# social and economic context attributes
+16 - emp.var.rate: employment variation rate - quarterly indicator (numeric)
+17 - cons.price.idx: consumer price index - monthly indicator (numeric) 
+18 - cons.conf.idx: consumer confidence index - monthly indicator (numeric) 
+19 - euribor3m: euribor 3 month rate - daily indicator (numeric)
+20 - nr.employed: number of employees - quarterly indicator (numeric)
+
+Output variable (desired target):
+21 - y - has the client subscribed a term deposit? (binary: 'yes','no')
+
+
+```{r}
+# Packages required
+library(rsample)
+library(caret)
+library(tidyverse)
+library(inspectdf) 
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(recipes)
+library(psych)
+
+# Model interpretability packages
+library(vip)       # variable importance
+library(ROCR)      # ROC curve
+```
+
+
+```{r}
+#http://archive.ics.uci.edu/ml/datasets/Bank+Marketing
+
+#read the data set
+bank <- read_csv2("data/bank-additional-full.csv")
+```
+#Portfolio Builder Exercise 1
+
+```{r}
+#EDA
+
+dim(bank)
+
+head(bank)
+
+glimpse(bank)
+```
+
+descriptive statistics
+```{r}
+summary(bank)
+```
+
+
+explore the distribution of categorical variables 
+```{r}
+
+ins <- inspect_cat(bank)
+show_plot(ins)
+```
+
+##2
+Assess the dataset for missingness.
+
+```{r}
+sum(is.na(bank))
+```
+
+
+```{r}
+bank %>%
+  is.na() %>%
+  reshape2::melt() %>%
+  ggplot(aes(Var2, Var1, fill = value)) + 
+    geom_raster() + 
+    coord_flip() +
+    scale_y_continuous(NULL, expand = c(0, 0)) +
+    scale_fill_grey(name = "", labels = c("Present", "Missing")) +
+    xlab("Observation") +
+    theme(axis.text.y  = element_text(size = 4))
+```
+
+most of the data is missing in "nr.employed" and because it has only one unique value, we are going to fill the whole column with the same number 
+
+```{r}
+bank %>%
+  mutate(nr.employed
+         = replace(nr.employed,
+                   is.na(nr.employed),
+                   median(nr.employed, na.rm = TRUE)))
+```
+
+again assess the number of missing values 
+```{r}
+sum(is.na(bank))
+```
+there is no missing values!
+
+
+check the target variable distribution 
+```{r}
+
+prop.table(table(bank$y))
+```
+
+```{r}
+ggplot(bank, aes(y)) +
+   geom_bar() +
+  labs(title = "the number of clients who subscribed a term deposit") +
+  theme_classic()+
+ NULL
+```
+
+Due to the impalance in the classes we are going to split the dataset into train and test with stratified sample 
+```{r}
+set.seed(123) # for reproducibility
+split <- initial_split(bank, strata = "y", prop = 0.7)
+train <- training(split)
+test  <- testing(split)
+
+```
+
+
+##3
+Assess the variance across the features.
+
+- Do any features have zero variance?
+nr.employed
+
+- Do any features have near-zero variance?
+pdays and nr.employed
+
+```{r slide-16}
+caret::nearZeroVar(train, saveMetrics= TRUE) %>% 
+  rownames_to_column() %>% 
+  filter(nzv)
+
+```
+##4
+Assess the categorical features.
+
+- Are categorical levels equally spread out across the features or is “lumping” occurring?
+the age and education are equally spread out across features 
+
+```{r}
+count(train, job) %>% arrange(n)
+```
+```{r}
+count(train, education) %>% arrange(n)
+```
+
+##5
+- Which values do you think should be one-hot or dummy encoded versus label encoded? Why?
+one-hot:
+all the categorical variables
+because many models require that all predictor variables be numeric.
+
+label encoded:
+check the count for month and day_of_week to make a decision  
+```{r}
+count(train, month)
+```
+
+```{r}
+count(train, day_of_week)
+```
+
+
+Execute a basic feature engineering process.
+First, apply a KNN model to your data without pre-applying feature engineering processes.
+```{r}
+cv <- trainControl(
+  method = "repeatedcv", 
+  number = 10, 
+  repeats = 5
+  )
+
+# 4. create a hyperparameter grid search
+hyper_grid <- expand.grid(k = seq(2, 26, by = 2))
+```
+
+
+```{r}
+knn_fit <- train(
+  y ~ ., 
+  data = train, 
+  method = "knn", 
+  trControl = cv, 
+  tuneGrid = hyper_grid,
+  na.action = na.pass
+  )
+
+```
+
+Create and a apply a blueprint of feature engineering processes that you think will help your model improve.
+
+```{r}
+blueprint <- recipe(y ~ ., data = train) %>%
+  step_nzv(all_nominal()) %>%
+  step_center(all_numeric(), -all_outcomes()) %>%
+  step_scale(all_numeric(), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE)
+
+```
+
+Now reapply the KNN model to your data that has been feature engineered.
+
+```{r}
+knn_fit_bp <- train(
+  blueprint, 
+  data = ames_train, 
+  method = "knn", 
+  trControl = cv, 
+  tuneGrid = hyper_grid,
+  metric = "RMSE"
+  )
+```
+
+Did your model performance improve?
+
+
+#Portfolio Builder Exercise 2
+
+##1
+Depending on the type of response variable, apply a linear or logistic regression model.
+
+First, apply the model to your data without pre-applying feature engineering processes.
+```{r}
+preBp_model <- train(
+  y ~ ., 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  trControl = cv
+)
+
+```
+
+
+Now reapply the model to your data that has been feature engineered.(blueprint)
+```{r}
+Bp_model <- train(
+  blueprint,
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  trControl = cv
+)
+
+```
+
+
+Did your model performance improve?
+
+
+##2
+Apply a principal component regression model.
+Perform a grid search over several components.
+```{r slide-21}
+
+
+set.seed(123)
+cv_pcr <- train(
+  blueprint,
+  data = train, 
+  trControl = cv,
+  method = "pcr", #<<
+  tuneGrid = hyper_grid, #<<
+  )
+
+# model with lowest RMSE
+cv_pcr$bestTune
+
+cv_pcr$results %>%
+  filter(ncomp == as.numeric(cv_pcr$bestTune))
+
+# plot cross-validated RMSE
+plot(cv_pcr)
+```
+
+Identify and explain the performance of the optimal model.
+
+##3
+Apply a partial least squares regression model.
+Perform a grid search over several components.
+```{r}
+# PLS
+set.seed(123)
+cv_pls <- train(
+  blueprint,
+  data = train, 
+  trControl = cv,
+  method = "pls", #<<
+  tuneGrid = hyper_grid
+  )
+
+# model with lowest RMSE
+cv_pls$bestTune
+
+cv_pls$results %>%
+  filter(ncomp == as.numeric(cv_pls$bestTune))
+
+# plot cross-validated RMSE
+plot(cv_pls)
+```
+
+Identify and explain the performance of the optimal model.
+
+
+##4
+
+Apply a regularized regression model.
+Perform a grid search across alpha parameter values ranging between 0–1.
+```{r}
+
+```
+
+What is the optimal alpha and lambda values?
+What is the MSE and RMSE for this optimal model?
+How does it compare to your previous models?
+
+
+
+
+
